@@ -1,8 +1,20 @@
+# This is the code for the 1st local search algorithm,
+# I am using a simulated annealing local search.
+# Initiate the initial guess using greedy algorithm and plus random
+# selected subsets to avoid a local optimal.
+# Temperature is designed to decay in a constant rate 0.99, with initial
+# temperature 1000 degree.
+# Use a restart process for 50 steps not getting better result.
+# Neighbor selection is to find the subset with most redundancy item and that
+# not exist, then add 10 random selected subsets
+
 import numpy as np
 import random
 import heapq
 import os
 import time
+import concurrent.futures
+
 
 
 def read_data(file_path):
@@ -277,11 +289,13 @@ def ls_sa(m,n,subsets,T0=1000,alpha=0.99):
                 best_items=current_items.copy()
                 best_l = len(S)
                 trace[trace_time] = best_l
+        # Restart if it do not work better after 50 steps
         if len(S)>best_l:
             if restart_count==50:
                 S=best_S
                 O=best_O
                 current_items=best_items
+                restart_count=1
             else:
                 restart_count+=1
     return best_S, trace
@@ -290,7 +304,7 @@ def output_solution(S, instance, method, cutoff, randSeed):
     if not os.path.exists("Result"):
         os.mkdir("Result")
     quality = len(S)
-    filename = f"Result/{instance}_{method}.{cutoff}.{randSeed}.sol"
+    filename = f"Result/{instance}_{method}_{cutoff}_{randSeed}.sol"
     with open(filename, "w") as f:
         f.write(f"{quality}\n")
         f.write(" ".join(map(str, S)) + "\n")
@@ -299,32 +313,48 @@ def output_solution(S, instance, method, cutoff, randSeed):
 def output_trace(trace, instance, method, cutoff, randSeed):
     if not os.path.exists("Result"):
         os.mkdir("Result")
-    filename = f"Result/{instance}_{method}.{cutoff}.{randSeed}.trace"
+    filename = f"Result/{instance}_{method}_{cutoff}_{randSeed}.trace"
     with open(filename, "w") as f:
         for t in sorted(trace.keys()):
-            f.write(f"{t:.2f} {trace[t]}\n")
+            f.write(f"{t:.4f} {trace[t]}\n")
     return 0
 
 
 def experiment():
     data_folder = "data 2"
     all_instances = set([f.split(".")[0] for f in os.listdir(data_folder) if os.path.isfile(os.path.join(data_folder, f))])
-    randSeed=1235
+    randSeed=1587
     cutoff = 600 
 
     for i in all_instances:
         print(i)
         random.seed(randSeed)
         n,m, subsets = parse_data(read_data(f"data 2/{i}.in"))
-        start_time = time.time()
 
-        while True:
-            best_S, trace = ls_sa(m,n,subsets)
-            if time.time() - start_time < cutoff:
-                break
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(ls_sa, m, n, subsets)
+            try:
+                best_S,trace = future.result(timeout=cutoff)
+            except concurrent.futures.TimeoutError:
+                print("Timed out!")
+                best_S,trace = None
 
         if best_S:
             output_solution(best_S,i,"LS1",cutoff,randSeed=randSeed)
             output_trace(trace,i,"LS1",cutoff,randSeed)
 
-experiment()
+def run_LS1(instance, cutoff, randSeed):
+    n,m, subsets = parse_data(read_data(f"data 2/{instance}"))
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(ls_sa, m, n, subsets)
+        try:
+            best_S,trace = future.result(timeout=cutoff)
+        except concurrent.futures.TimeoutError:
+            print("Timed out!")
+            best_S,trace = None
+
+    if best_S:
+        output_solution(best_S,instance,"LS1",cutoff,randSeed=randSeed)
+        output_trace(trace,instance,"LS1",cutoff,randSeed)
