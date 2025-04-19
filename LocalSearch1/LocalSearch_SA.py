@@ -301,19 +301,19 @@ def ls_sa(m,n,subsets,T0=1000,alpha=0.99):
     return best_S, trace
 
 def output_solution(S, instance, method, cutoff, randSeed):
-    if not os.path.exists("Result"):
-        os.mkdir("Result")
+    if not os.path.exists("Result_LS1"):
+        os.mkdir("Result_LS1")
     quality = len(S)
-    filename = f"Result/{instance}_{method}_{cutoff}_{randSeed}.sol"
+    filename = f"Result_LS1/{instance}_{method}_{cutoff}_{randSeed}.sol"
     with open(filename, "w") as f:
         f.write(f"{quality}\n")
         f.write(" ".join(map(str, S)) + "\n")
     return 0
 
 def output_trace(trace, instance, method, cutoff, randSeed):
-    if not os.path.exists("Result"):
-        os.mkdir("Result")
-    filename = f"Result/{instance}_{method}_{cutoff}_{randSeed}.trace"
+    if not os.path.exists("Result_LS1"):
+        os.mkdir("Result_LS1")
+    filename = f"Result_LS1/{instance}_{method}_{cutoff}_{randSeed}.trace"
     with open(filename, "w") as f:
         for t in sorted(trace.keys()):
             f.write(f"{t:.4f} {trace[t]}\n")
