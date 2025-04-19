@@ -1,6 +1,6 @@
 import argparse
 from Branch_and_bound import *
-
+from LocalSearch_SA import run_LS1
 
 def parse_set_cover_instance(filename):
     """
@@ -82,11 +82,16 @@ def main():
         write_BnB_solution_file(args.inst, args.time, best_solution) # write .sol file
         write_BnB_trace_file(args.inst, args.time, trace_log) # write .trace file
 
-    elif args.alg == "LS1":
-        # run_local_search(args.inst, args.time, args.seed)
-        print("Local search algorithm not implemented yet.")
     elif args.alg == "Approx":
         print("Approximation algorithm not implemented yet.")
+
+    elif args.alg == "LS1":
+        run_LS1(args.inst, args.time, args.seed)
+        # print("Local search algorithm not implemented yet.")
+    
+    elif args.alg == "LS2":
+        # run_LS2(args.inst, args.time, args.seed)
+        print("Local search algorithm not implemented yet.")
     else:
         print("Unknown algorithm.")
 
