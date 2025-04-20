@@ -1,11 +1,7 @@
-# greedy_set_cover.py
-
 import os
-import glob
 import time
-import pandas as pd
-
-# --- Helper Functions ---
+import argparse
+import random
 
 def parse_set_cover_instance(filename):
     subsets = []
@@ -24,30 +20,7 @@ def parse_set_cover_instance(filename):
         print(f"Error parsing {filename}: {e}")
         return None, None
 
-
-def read_optimal_value(filename):
-    try:
-        with open(filename, 'r') as f:
-            return int(f.readline().strip())
-    except Exception:
-        print(f"Warning: Cannot read optimal value from {filename}")
-        return None
-
-
-def write_solution_file(filename_base, method, cutoff, seed, solution_indices, quality):
-    sol_filename = f"{filename_base}_{method}_{cutoff}.sol"
-    try:
-        with open(sol_filename, 'w') as f:
-            f.write(f"{quality}\n")
-            f.write(" ".join(map(str, solution_indices)) + "\n")
-    except Exception as e:
-        print(f"Error writing {sol_filename}: {e}")
-
-
-# --- Greedy Set Cover Algorithm ---
-
 def greedy_set_cover(universe_size, subsets):
-    start_time = time.time()
     uncovered = set(range(1, universe_size + 1))
     cover_indices = []
     remaining = [(i + 1, s.copy()) for i, s in enumerate(subsets)]
@@ -69,84 +42,50 @@ def greedy_set_cover(universe_size, subsets):
         uncovered -= best_set
         remaining.pop(best_i)
 
-    exec_time = time.time() - start_time
-    return sorted(cover_indices), universe_size - len(uncovered), exec_time
+    return sorted(cover_indices)
 
-
-# --- Runner ---
-
-def run_experiment(data_dir, pattern, method, cutoff, seed=None):
-    results = []
+def write_solution_file(instance_path, method, cutoff, seed, cover_indices):
+    base = os.path.basename(instance_path).replace('.in', '')
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
-
-    input_files = sorted(glob.glob(os.path.join(data_dir, pattern)))
-    if not input_files:
-        print(f"Warning: No input files for pattern {pattern}")
-        return results
-
-    for in_file in input_files:
-        base = os.path.basename(in_file).replace('.in', '')
-        out_file = os.path.join(data_dir, base + '.out')
-
-        universe_size, subsets = parse_set_cover_instance(in_file)
-        if universe_size is None:
-            results.append({'Instance': base, 'Time': 0, 'Quality': 'Error', 'Optimal': 'N/A', 'RelErr': 'N/A', 'Method': method})
-            continue
-
-        opt_value = read_optimal_value(out_file)
-        cover_indices, covered_count, exec_time = greedy_set_cover(universe_size, subsets)
-        quality = len(cover_indices)
-
-        rel_err = None
-        opt_display = 'N/A'
-        if opt_value is not None:
-            opt_display = opt_value
-            rel_err = (quality - opt_value) / float(opt_value) if opt_value > 0 else float('inf')
-
-        sol_file_base = os.path.join(output_dir, base)
-        write_solution_file(sol_file_base, method, cutoff, seed, cover_indices, quality)
-
-        results.append({
-            'Instance': base,
-            'Time': exec_time,
-            'Quality': quality,
-            'Optimal': opt_display,
-            'RelErr': rel_err,
-            'CoveredElements': covered_count,
-            'UniverseSize': universe_size,
-            'Method': method
-        })
-
-    return results
-
+    filename = os.path.join(output_dir, f"{base}_{method}_{cutoff}.sol")
+    try:
+        with open(filename, 'w') as f:
+            f.write(f"{len(cover_indices)}\n")
+            f.write(" ".join(map(str, cover_indices)) + "\n")
+        print(f"Solution written to {filename}")
+    except Exception as e:
+        print(f"Error writing solution: {e}")
 
 def main():
-    DATA_DIRECTORY = "data"
-    CUTOFF_TIME = 600
-    METHOD_NAME = "Greedy"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-inst', required=True, help='Input .in file path')
+    parser.add_argument('-alg', required=True, choices=['BnB', 'Approx', 'LS1', 'LS2'], help='Algorithm to use')
+    parser.add_argument('-time', required=True, type=int, help='Cutoff time in seconds')
+    parser.add_argument('-seed', required=True, type=int, help='Random seed')
 
-    all_results = []
-    for pattern in ["test*.in", "small*.in", "large*.in"]:
-        all_results.extend(run_experiment(DATA_DIRECTORY, pattern, METHOD_NAME, CUTOFF_TIME))
+    args = parser.parse_args()
 
-    df = pd.DataFrame(all_results)
+    random.seed(args.seed)
+    input_file = args.inst
+    alg = args.alg
+    cutoff = args.time
+    seed = args.seed
 
-    def format_rel_err(x):
-        if x is None: return 'N/A'
-        if x == float('inf'): return 'inf'
-        return f"{x:.4f}"
+    universe_size, subsets = parse_set_cover_instance(input_file)
+    if universe_size is None:
+        return
 
-    df['RelErr_Display'] = df['RelErr'].apply(format_rel_err)
-    df['Time'] = df['Time'].apply(lambda x: f"{x:.4f}")
-
-    summary_df = df[['Instance', 'Method', 'Time', 'Quality', 'Optimal', 'RelErr_Display']]
-    output_path = os.path.join("output", "greedy_results_summary.csv")
-    summary_df.to_csv(output_path, index=False)
-
-    print("\n--- Results written to:", output_path, "---")
-    print(summary_df)
-
+    if alg == "Approx":
+        start_time = time.time()
+        cover_indices = greedy_set_cover(universe_size, subsets)
+        elapsed = time.time() - start_time
+        if elapsed > cutoff:
+            print(f"Warning: Execution time {elapsed:.2f}s exceeded cutoff {cutoff}s")
+        write_solution_file(input_file, alg, cutoff, seed, cover_indices)
+    else:
+        print(f"Algorithm '{alg}' not implemented yet.")
 
 if __name__ == "__main__":
     main()
+
