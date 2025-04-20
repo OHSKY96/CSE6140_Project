@@ -1,6 +1,5 @@
 import os
 import time
-import argparse
 import random
 
 def parse_set_cover_instance(filename):
@@ -44,8 +43,8 @@ def greedy_set_cover(universe_size, subsets):
 
     return sorted(cover_indices)
 
-def write_solution_file(instance_path, method, cutoff, seed, cover_indices):
-    base = os.path.basename(instance_path).replace('.in', '')
+def write_approx_solution_file(inst_name, method, cutoff, cover_indices):
+    base = inst_name.replace('.in', '')
     output_dir = "output"
     os.makedirs(output_dir, exist_ok=True)
     filename = os.path.join(output_dir, f"{base}_{method}_{cutoff}.sol")
@@ -57,35 +56,19 @@ def write_solution_file(instance_path, method, cutoff, seed, cover_indices):
     except Exception as e:
         print(f"Error writing solution: {e}")
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-inst', required=True, help='Input .in file path')
-    parser.add_argument('-alg', required=True, choices=['BnB', 'Approx', 'LS1', 'LS2'], help='Algorithm to use')
-    parser.add_argument('-time', required=True, type=int, help='Cutoff time in seconds')
-    parser.add_argument('-seed', required=True, type=int, help='Random seed')
+def run_greedy(inst_name, cutoff, seed):
+    random.seed(seed)
+    instance_path = os.path.join("data", inst_name)
 
-    args = parser.parse_args()
-
-    random.seed(args.seed)
-    input_file = args.inst
-    alg = args.alg
-    cutoff = args.time
-    seed = args.seed
-
-    universe_size, subsets = parse_set_cover_instance(input_file)
+    universe_size, subsets = parse_set_cover_instance(instance_path)
     if universe_size is None:
         return
 
-    if alg == "Approx":
-        start_time = time.time()
-        cover_indices = greedy_set_cover(universe_size, subsets)
-        elapsed = time.time() - start_time
-        if elapsed > cutoff:
-            print(f"Warning: Execution time {elapsed:.2f}s exceeded cutoff {cutoff}s")
-        write_solution_file(input_file, alg, cutoff, seed, cover_indices)
-    else:
-        print(f"Algorithm '{alg}' not implemented yet.")
+    start_time = time.time()
+    cover_indices = greedy_set_cover(universe_size, subsets)
+    elapsed = time.time() - start_time
 
-if __name__ == "__main__":
-    main()
+    if elapsed > cutoff:
+        print(f"Warning: Execution time {elapsed:.2f}s exceeded cutoff {cutoff}s")
 
+    write_approx_solution_file(inst_name, "Approx", cutoff, cover_indices)
