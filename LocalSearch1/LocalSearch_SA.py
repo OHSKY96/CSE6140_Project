@@ -320,30 +320,6 @@ def output_trace(trace, instance, method, cutoff, randSeed):
     return 0
 
 
-def experiment():
-    data_folder = "data 2"
-    all_instances = set([f.split(".")[0] for f in os.listdir(data_folder) if os.path.isfile(os.path.join(data_folder, f))])
-    randSeed=1587
-    cutoff = 600 
-
-    for i in all_instances:
-        print(i)
-        random.seed(randSeed)
-        n,m, subsets = parse_data(read_data(f"data 2/{i}.in"))
-
-
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(ls_sa, m, n, subsets)
-            try:
-                best_S,trace = future.result(timeout=cutoff)
-            except concurrent.futures.TimeoutError:
-                print("Timed out!")
-                best_S,trace = None
-
-        if best_S:
-            output_solution(best_S,i,"LS1",cutoff,randSeed=randSeed)
-            output_trace(trace,i,"LS1",cutoff,randSeed)
-
 def run_LS1(instance, cutoff, randSeed):
     n,m, subsets = parse_data(read_data(f"data 2/{instance}"))
 
