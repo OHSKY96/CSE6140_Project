@@ -188,3 +188,43 @@ def plot_runtime_boxplots():
     plt.tight_layout()
     plt.savefig("runtime_boxplot.png")
     plt.close()
+
+def plot_error_boxplots():
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    total = find_all_instances("Graph/")
+    exp = set(["Graph/" + x.split(".")[0] + ".trace" for x in total])
+    instances = set([x.split("_")[0] for x in total])
+
+    # Dictionary to store runtimes for each instance
+    runtimes = {i: [] for i in instances}
+
+    for file in exp:
+        instance = file.split("/")[1].split("_")[0]
+        opt_path = "data 2/" + instance + ".out"
+        reference = read_first_number(opt_path)
+
+        times, trace = parse_trace_file(file)
+        if trace:
+            runtimes[instance].append(rel_error(reference, trace[-1]))  # take final time for that run
+
+    # Sort instances numerically by extracting number from 'largeX'
+    sorted_instances = sorted(runtimes.keys(), key=lambda x: int(x.replace("large", "")))
+
+    # Prepare data and labels
+    data = [runtimes[inst] for inst in sorted_instances]
+    labels = sorted_instances
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.boxplot(data, labels=labels, patch_artist=True)
+    plt.xlabel("Instance")
+    plt.ylabel("Relative Error")
+    plt.title("Box Plot of Relative Error with SA Local Search")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("error_boxplot.png")
+    plt.close()
+
+plot_error_boxplots()
