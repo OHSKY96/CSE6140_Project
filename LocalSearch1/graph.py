@@ -228,3 +228,6 @@ def plot_error_boxplots():
     plt.close()
 
 plot_error_boxplots()
+plot_runtime_boxplots()
+SQD()
+QRTD()
