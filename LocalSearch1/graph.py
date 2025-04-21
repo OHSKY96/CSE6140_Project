@@ -92,16 +92,32 @@ def qr_sqd_plot(trace_files, time_points, q_opt, labels=None):
     return plt
 
 def main():
-    total = find_all_instances("Result/")
+    total = find_all_instances("Result_LS1/")
     exp = set([x.split(".")[0] for x in total])
+    ins = set([x.split("_")[0] for x in total])
+    size = {}
+    runtime = {}
+    relerr = {}
+    for key in ins:
+        size[key] = []
+        runtime[key] = []
+        relerr[key] = []
+
     for i in exp:
         opt_path = "data 2/"+i.split("_")[0]+".out"
-        exp_path = "Result/"+i.split(".")[0]
+        exp_path = "Result_LS1/"+i.split(".")[0]
+        instance = i.split("_")[0]
         reference = read_first_number(opt_path)
         ls = read_first_number(exp_path+".sol")
         time,_ = parse_trace_file(exp_path+".trace")
-        print(f"{i}: runtime {time[-1]}, size {ls}, rel_err {rel_error(reference,ls)}")
-
+        size[instance].append(ls)
+        runtime[instance].append(time[-1])
+        relerr[instance].append(rel_error(reference,ls))
+    for i in ins:
+        avg_runtime = np.average(runtime[i])
+        avg_size = np.average(size[i])
+        avg_err = np.average(relerr[i])
+        print(f"{i}: runtime {avg_runtime}, size {avg_size}, err {avg_err}")
 def QRTD():
     total = find_all_instances("Graph/")
     exp = set(["Graph/"+x.split(".")[0]+".trace" for x in total])
@@ -137,5 +153,38 @@ def SQD():
         plt = qr_sqd_plot(graph,timepoints,reference)
         plt.savefig(f"{i}_SQD.png")
         plt.close()
-SQD()
-QRTD()
+
+def plot_runtime_boxplots():
+    import seaborn as sns
+
+    total = find_all_instances("Graph/")
+    exp = set(["Graph/" + x.split(".")[0] + ".trace" for x in total])
+    instances = set([x.split("_")[0] for x in total])
+
+    # Dictionary to store runtimes for each instance
+    runtimes = {i: [] for i in instances}
+
+    for file in exp:
+        instance = file.split("/")[1].split("_")[0]
+        times, _ = parse_trace_file(file)
+        if times:
+            runtimes[instance].append(times[-1])  # take final time for that run
+
+    # Prepare data for boxplot
+    data = []
+    labels = []
+
+    for inst, time_list in runtimes.items():
+        data.append(time_list)
+        labels.append(inst)
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.boxplot(data, labels=labels, patch_artist=True)
+    plt.xlabel("Instance")
+    plt.ylabel("Running Time (s)")
+    plt.title("Box Plot of Running Times with SA local Search")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("runtime_boxplot.png")
+    plt.close()
